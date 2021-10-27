@@ -5,6 +5,7 @@ class Validation {
         readonly validatedRangeName: string,
         readonly validatingSheetName: string, 
         readonly validatingRangeName: string,
+        readonly allowInvalid: boolean = false,
         readonly additionalValidationValues: string[] = []
     ) {}
 
@@ -24,7 +25,7 @@ class Validation {
         if (!modifiedRange || rangeIntersect(modifiedRange, validatingRange)) {
             let validationValues = [].concat(...validatingRange.getDisplayValues(), ...this.additionalValidationValues)
             const rules = SpreadsheetApp.newDataValidation()
-                .setAllowInvalid(false)
+                .setAllowInvalid(this.allowInvalid)
                 .requireValueInList(validationValues)
                 .build()
             validatedRange.setDataValidation(rules)
