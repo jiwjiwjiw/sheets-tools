@@ -15,15 +15,22 @@ class Validation {
             SpreadsheetApp.getUi().alert(`Tentative d'accès à la feuille inexistante "${this.validatedSheetName}"`)
             return
         }
-        const validatingSheet = SpreadsheetApp.getActive().getSheetByName(this.validatingSheetName)
-        if (!validatingSheet) {
-            SpreadsheetApp.getUi().alert(`Tentative d'accès à la feuille inexistante "${this.validatingSheetName}"`)
+        const validatedRange = validatedSheet.getRange(this.validatedRangeName)
+        if (!validatedRange) {
+            SpreadsheetApp.getUi().alert(`Tentative d'accès à la plage inexistante "${this.validatedRangeName}"`)
             return
         }
-        const validatedRange = validatedSheet.getRange(this.validatedRangeName)
-        const validatingRange = validatingSheet.getRange(this.validatingRangeName)
+        const validatingSheet = SpreadsheetApp.getActive().getSheetByName(this.validatingSheetName)
+        let validatingRange = undefined
+        if (validatingSheet) {
+            validatingRange = validatingSheet.getRange(this.validatingRangeName)
+        }
         if (!modifiedRange || rangeIntersect(modifiedRange, validatingRange)) {
-            let validationValues = [].concat(...validatingRange.getDisplayValues(), ...this.additionalValidationValues)
+            let validationValues = []
+            if (validatingRange) {
+                validationValues = validationValues.concat(...validatingRange.getDisplayValues())
+            }
+            validationValues = validationValues.concat(...this.additionalValidationValues)
             const rules = SpreadsheetApp.newDataValidation()
                 .setAllowInvalid(this.allowInvalid)
                 .requireValueInList(validationValues)

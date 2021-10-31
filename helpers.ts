@@ -1,4 +1,5 @@
 function rangeIntersect(r1: GoogleAppsScript.Spreadsheet.Range, r2: GoogleAppsScript.Spreadsheet.Range): boolean {
+  if(!r1 || !r2) return false
   let sheetMatches = r1.getSheet().getName() == r2.getSheet().getName()
   let rangeIntersects = (r1.getLastRow() >= r2.getRow()) && (r2.getLastRow() >= r1.getRow()) && (r1.getLastColumn() >= r2.getColumn()) && (r2.getLastColumn() >= r1.getColumn());
   return sheetMatches && rangeIntersects
