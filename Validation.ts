@@ -21,7 +21,7 @@ class Validation {
             return
         }
         const validatingSheet = SpreadsheetApp.getActive().getSheetByName(this.validatingSheetName)
-        let validatingRange = undefined
+        let validatingRange: GoogleAppsScript.Spreadsheet.Range = undefined
         if (validatingSheet) {
             validatingRange = validatingSheet.getRange(this.validatingRangeName)
         }
