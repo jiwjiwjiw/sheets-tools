@@ -52,7 +52,7 @@ class EmailTemplate {
                 case "aucun":
                     html += listContext ? '</ul>' : ''
                     listContext = false
-                    if (conditionOk) html += entry.richText.getText()
+                    if (conditionOk) html += entry.richText.getText() // no rich text handling for 'aucun'
                     break;
                 case "paragraphe" :
                     html += listContext ? '</ul>' : ''
@@ -62,12 +62,12 @@ class EmailTemplate {
                 case "titre" :
                     html += listContext ? '</ul>' : ''
                     listContext = false
-                    if (conditionOk) html += `<h1>${this.richTextToHtml(entry.richText)}</h1>`
+                    if (conditionOk) html += `<h1>${entry.richText.getText()}</h1>` // no rich text handling for title
                     break;
                 case "sous-titre" :
                     html += listContext ? '</ul>' : ''
                     listContext = false
-                    if (conditionOk) html += `<h2>${this.richTextToHtml(entry.richText)}</h2>`
+                    if (conditionOk) html += `<h2>${entry.richText.getText()}</h2>` // no rich text handling for subtitle
                     break;
                 case "élément de liste" :
                     if (conditionOk) {
