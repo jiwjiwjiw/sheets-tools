@@ -32,3 +32,7 @@ function getColumn(index: number) {
 function searchReplace(oldValue: string, newValue: string) {
   return (row: Array<string>) => row.map(x => (x === oldValue) ? newValue : x)
 }
+
+function getDriveId(sharingLink: string): string {
+  return sharingLink.match(/[-\w]{25,}(?!.*[-\w]{25,})/)[0]
+}
