@@ -46,6 +46,10 @@ export function getDriveId (sharingLink: string): string {
   return result[0]
 }
 
+export function addslashes (str: string) {
+  return (str + '').replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0')
+}
+
 // function durationToDecimalHours(d: Duration): number {
 //   if (d.years) throw new Error("Function durationToDecimalHours cannot be used if duration contain years (number of days in year varies)!")
 //   const daysInWeek = 7
