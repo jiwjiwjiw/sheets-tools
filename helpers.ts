@@ -41,6 +41,8 @@ export function searchReplace (oldValue: string, newValue: string) {
 }
 
 export function getDriveId (sharingLink: string): string {
+  if (sharingLink === '')
+    throw 'Lien vers un emplacement Google Drive manquant.'
   const result = sharingLink.match(/[-\w]{25,}(?!.*[-\w]{25,})/)
   if (!result) throw new Error(`No drive ID could be found in ${sharingLink}`)
   return result[0]
