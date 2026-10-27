@@ -1,0 +1,20 @@
+{
+  "include": ["*.ts"],
+  "compilerOptions": {
+    /* This module is compiled by the projects that embed it as a submodule.
+       These options are the strictest ones used by any of them, so that the
+       code is valid everywhere. */
+    "target": "ES2019",
+    "lib": ["es2021"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["google-apps-script"],
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}

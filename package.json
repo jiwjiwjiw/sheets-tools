@@ -1,0 +1,24 @@
+{
+  "name": "sheets-tools",
+  "version": "1.0.0",
+  "description": "Helpers shared by Google Apps Script projects bound to Google Sheets (validation lists, Drive links, email templates)",
+  "repository": "https://github.com/jiwjiwjiw/sheets-tools.git",
+  "author": "Jean Iwanowski",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10",
+    "@types/google-apps-script": "^2.0.13",
+    "eslint": "^10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8"
+  },
+  "packageManager": "yarn@1.22.22",
+  "engines": {
+    "node": ">=20"
+  }
+}
