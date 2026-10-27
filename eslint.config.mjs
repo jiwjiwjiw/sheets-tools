@@ -8,6 +8,7 @@ const nodeGlobals = {
   require: 'readonly',
   module: 'writable',
   process: 'readonly',
+  console: 'readonly',
   __dirname: 'readonly'
 }
 
@@ -17,6 +18,9 @@ export default tseslint.config(
   {
     files: ['**/*.ts'],
     extends: [...tseslint.configs.recommended],
+    // Required by typescript-eslint when more than one tsconfig.json is in
+    // reach (the consumers have their own next to this submodule).
+    languageOptions: { parserOptions: { tsconfigRootDir: import.meta.dirname } },
     rules: {
       // Apps Script code throws plain strings on purpose: they are shown to the
       // user as-is in a dialog.
