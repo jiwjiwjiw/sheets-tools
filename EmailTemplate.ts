@@ -26,13 +26,25 @@ export class EmailTemplate {
       return
     }
     this.textEntries = new Array()
-    for (let index = 2; index < sheet.getLastRow(); index++) {
+    // Rows 2..lastRow hold the template; read them in two calls instead of
+    // three per row.
+    const numRows = sheet.getLastRow() - 1
+    if (numRows <= 0) return
+    const range = sheet.getRange(2, 1, numRows, 3)
+    const values = range.getValues()
+    const richTexts = range.getRichTextValues()
+    for (let index = 0; index < numRows; index++) {
       this.textEntries.push({
-        type: sheet.getRange(index, 1).getValue(),
-        condition: sheet.getRange(index, 2).getValue(),
-        richText: sheet.getRange(index, 3).getRichTextValue()
+        type: values[index][0],
+        condition: values[index][1],
+        richText: richTexts[index][2]
       })
     }
+  }
+
+  /** True when no template row could be read (missing sheet or only a header). */
+  public isEmpty (): boolean {
+    return this.textEntries.length === 0
   }
 
   public addValidation () {
@@ -111,6 +123,8 @@ export class EmailTemplate {
           break
       }
     }
+    // A template ending with list items would otherwise leave the <ul> open.
+    html += listContext ? '</ul>' : ''
     return { subject, html }
   }
 
@@ -136,7 +150,8 @@ export class EmailTemplate {
       const styles: any = {
         color: style.getForegroundColor(),
         'font-family': style.getFontFamily(),
-        'font-size': `${style.getFontSize()}pt`,
+        // getFontSize() is null when the run has no explicit size.
+        'font-size': style.getFontSize() ? `${style.getFontSize()}pt` : '',
         'font-weight': style.isBold() ? 'bold' : '',
         'font-style': style.isItalic() ? 'italic' : '',
         'text-decoration': style.isUnderline() ? 'underline' : ''
