@@ -48,6 +48,12 @@ export class Validation {
       validationValues = validationValues.concat(
         ...this.additionalValidationValues
       )
+      // Empty cells of the validating column would otherwise become empty
+      // entries of the list, and duplicates inflate it towards the 500-item
+      // limit of list validations.
+      validationValues = validationValues.filter(
+        (value, index, all) => value !== '' && all.indexOf(value) === index
+      )
       const rules = SpreadsheetApp.newDataValidation()
         .setAllowInvalid(this.allowInvalid)
         .requireValueInList(validationValues)
