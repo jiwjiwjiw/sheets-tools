@@ -20,7 +20,7 @@ export class ValidationHandler {
   public update (
     modifiedRange: GoogleAppsScript.Spreadsheet.Range | undefined = undefined
   ): void {
-    for (let validation of this.validations) {
+    for (const validation of this.validations) {
       validation.update(modifiedRange)
     }
   }

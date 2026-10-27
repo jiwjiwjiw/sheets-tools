@@ -14,8 +14,6 @@ export class EmailTemplate {
     richText: GoogleAppsScript.Spreadsheet.RichTextValue | null
     condition: string
   }> = []
-  private subject: string = ''
-  private html: string = ''
 
   constructor (private params: EmailTemplateParams) {
     const sheet = SpreadsheetApp.getActive().getSheetByName(params.sheetName)
@@ -25,7 +23,7 @@ export class EmailTemplate {
       )
       return
     }
-    this.textEntries = new Array()
+    this.textEntries = []
     // Rows 2..lastRow hold the template; read them in two calls instead of
     // three per row.
     const numRows = sheet.getLastRow() - 1
