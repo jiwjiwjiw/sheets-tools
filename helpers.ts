@@ -21,7 +21,8 @@ export function rowHasContentInColumn (index: number) {
 }
 
 export function compareRowsOnColumn (index: number) {
-  return (a: Array<string>, b: Array<string>) => (a[index] > b[index] ? 1 : -1)
+  return (a: Array<string>, b: Array<string>) =>
+    a[index] > b[index] ? 1 : a[index] < b[index] ? -1 : 0
 }
 
 export function rowHasValue (index: number, value: string) {
