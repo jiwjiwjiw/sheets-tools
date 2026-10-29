@@ -49,6 +49,21 @@ export function getDriveId (sharingLink: string): string {
   return result[0]
 }
 
+/** Escapes the five characters that have a meaning in HTML text or attributes. */
+export function escapeHtml (text: string): string {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** Escapes a cell text for HTML and keeps its line breaks. */
+export function textToHtml (text: string): string {
+  return escapeHtml(text).replace(/\r?\n/g, '<br>')
+}
+
 export function addslashes (str: string) {
   // eslint-disable-next-line no-control-regex -- NUL bytes must be escaped in Drive queries
   return (str + '').replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0')
