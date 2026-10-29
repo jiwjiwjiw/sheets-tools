@@ -10,35 +10,51 @@ export class Validation {
     readonly additionalValidationValues: string[] = []
   ) {}
 
+  /**
+   * Applies the dropdown to the validated range.
+   *
+   * When the allowed values come from a range only, the rule references that
+   * range (`requireValueInRange`): it follows the sheet without any refresh
+   * and has no item limit. A static list, with or without a range, becomes a
+   * list rule (`requireValueInList`, at most 500 items).
+   *
+   * Nothing is written when a sheet is missing: a missing validating sheet
+   * would otherwise turn the dropdown into an empty strict list that rejects
+   * every input. No UI call either, as this may run from a trigger.
+   */
   update (
     modifiedRange: GoogleAppsScript.Spreadsheet.Range | undefined = undefined
   ): void {
-    const validatedSheet = SpreadsheetApp.getActive().getSheetByName(
-      this.validatedSheetName
-    )
+    const spreadsheet = SpreadsheetApp.getActive()
+    const validatedSheet = spreadsheet.getSheetByName(this.validatedSheetName)
     if (!validatedSheet) {
-      SpreadsheetApp.getUi().alert(
-        `Tentative d'accès à la feuille inexistante "${this.validatedSheetName}"`
-      )
+      console.warn(`Feuille "${this.validatedSheetName}" introuvable`)
       return
     }
     const validatedRange = validatedSheet.getRange(this.validatedRangeName)
-    if (!validatedRange) {
-      SpreadsheetApp.getUi().alert(
-        `Tentative d'accès à la plage inexistante "${this.validatedRangeName}"`
+
+    let validatingRange: GoogleAppsScript.Spreadsheet.Range | undefined
+    if (this.validatingSheetName !== '') {
+      const validatingSheet = spreadsheet.getSheetByName(
+        this.validatingSheetName
       )
-      return
-    }
-    const validatingSheet = SpreadsheetApp.getActive().getSheetByName(
-      this.validatingSheetName
-    )
-    let validatingRange:
-      | GoogleAppsScript.Spreadsheet.Range
-      | undefined = undefined
-    if (validatingSheet) {
+      if (!validatingSheet) {
+        console.warn(`Feuille "${this.validatingSheetName}" introuvable`)
+        return
+      }
       validatingRange = validatingSheet.getRange(this.validatingRangeName)
     }
-    if (!modifiedRange || rangeIntersect(modifiedRange, validatingRange)) {
+
+    if (modifiedRange && !rangeIntersect(modifiedRange, validatingRange)) {
+      return
+    }
+
+    const builder = SpreadsheetApp.newDataValidation().setAllowInvalid(
+      this.allowInvalid
+    )
+    if (validatingRange && this.additionalValidationValues.length === 0) {
+      builder.requireValueInRange(validatingRange, true)
+    } else {
       let validationValues: string[] = []
       if (validatingRange) {
         validationValues = validationValues.concat(
@@ -54,11 +70,8 @@ export class Validation {
       validationValues = validationValues.filter(
         (value, index, all) => value !== '' && all.indexOf(value) === index
       )
-      const rules = SpreadsheetApp.newDataValidation()
-        .setAllowInvalid(this.allowInvalid)
-        .requireValueInList(validationValues)
-        .build()
-      validatedRange.setDataValidation(rules)
+      builder.requireValueInList(validationValues, true)
     }
+    validatedRange.setDataValidation(builder.build())
   }
 }
