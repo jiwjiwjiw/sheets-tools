@@ -1,5 +1,12 @@
 import { rangeIntersect } from './helpers'
 
+/** True when every non-empty cell of the range is text (no date, no number). */
+function holdsTextOnly (range: GoogleAppsScript.Spreadsheet.Range): boolean {
+  return range
+    .getValues()
+    .every(row => row.every(value => value === '' || typeof value === 'string'))
+}
+
 export class Validation {
   constructor (
     readonly validatedSheetName: string,
@@ -13,10 +20,14 @@ export class Validation {
   /**
    * Applies the dropdown to the validated range.
    *
-   * When the allowed values come from a range only, the rule references that
-   * range (`requireValueInRange`): it follows the sheet without any refresh
-   * and has no item limit. A static list, with or without a range, becomes a
-   * list rule (`requireValueInList`, at most 500 items).
+   * When the allowed values come from a range of text cells only, the rule
+   * references that range (`requireValueInRange`): it follows the sheet
+   * without any refresh and has no item limit. A static list, with or without
+   * a range, becomes a list rule (`requireValueInList`, at most 500 items).
+   * So does a range holding dates or numbers: Sheets compares the text picked
+   * in the dropdown with the raw value of such cells and rejects it ("les
+   * données saisies ne respectent pas les règles de validation"), while a
+   * list of display values is matched as text.
    *
    * Nothing is written when a sheet is missing: a missing validating sheet
    * would otherwise turn the dropdown into an empty strict list that rejects
@@ -52,7 +63,11 @@ export class Validation {
     const builder = SpreadsheetApp.newDataValidation().setAllowInvalid(
       this.allowInvalid
     )
-    if (validatingRange && this.additionalValidationValues.length === 0) {
+    if (
+      validatingRange &&
+      this.additionalValidationValues.length === 0 &&
+      holdsTextOnly(validatingRange)
+    ) {
       builder.requireValueInRange(validatingRange, true)
     } else {
       let validationValues: string[] = []
