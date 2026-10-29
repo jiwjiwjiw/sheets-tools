@@ -1,29 +1,46 @@
+import { escapeHtml, textToHtml } from './helpers'
 import { Validation } from './Validation'
 import { ValidationHandler } from './ValidationHandler'
 
 export interface EmailTemplateParams {
   sheetName: string
   conditions: string[]
+  /** Substitutes the markers in the HTML body. Values must be HTML-escaped. */
   insertData(html: string, data: any): string
+  /** Substitutes the markers in the plain-text subject (optional). */
+  insertSubjectData?(subject: string, data: any): string
   evaluateCondition(condition: string, data: any): boolean
 }
 
+/** One row of a template sheet. */
+export interface TemplateEntry {
+  type: string
+  condition: string
+  /** The cell text, whatever the cell type (text, number, date…). */
+  text: string
+  /** The rich text, or null when the cell does not hold text. */
+  richText: GoogleAppsScript.Spreadsheet.RichTextValue | null
+}
+
+export const TEMPLATE_TYPES = [
+  'sujet',
+  'titre',
+  'sous-titre',
+  'paragraphe',
+  'élément de liste',
+  'aucun'
+]
+
 export class EmailTemplate {
-  private textEntries: Array<{
-    type: string
-    richText: GoogleAppsScript.Spreadsheet.RichTextValue | null
-    condition: string
-  }> = []
+  private textEntries: TemplateEntry[] = []
 
   constructor (private params: EmailTemplateParams) {
     const sheet = SpreadsheetApp.getActive().getSheetByName(params.sheetName)
     if (!sheet) {
-      SpreadsheetApp.getUi().alert(
-        `Tentative d'accès à la feuille inexistante "${params.sheetName}"`
-      )
+      // No UI call here: this may run from a trigger. Callers check isEmpty().
+      console.warn(`Feuille modèle "${params.sheetName}" introuvable`)
       return
     }
-    this.textEntries = []
     // Rows 2..lastRow hold the template; read them in two calls instead of
     // three per row.
     const numRows = sheet.getLastRow() - 1
@@ -33,8 +50,9 @@ export class EmailTemplate {
     const richTexts = range.getRichTextValues()
     for (let index = 0; index < numRows; index++) {
       this.textEntries.push({
-        type: values[index][0],
-        condition: values[index][1],
+        type: String(values[index][0]).trim(),
+        condition: String(values[index][1]).trim(),
+        text: String(values[index][2]),
         richText: richTexts[index][2]
       })
     }
@@ -45,89 +63,82 @@ export class EmailTemplate {
     return this.textEntries.length === 0
   }
 
-  public addValidation () {
+  /** Registers the dropdowns of a template sheet without reading it. */
+  public static addValidation (params: EmailTemplateParams) {
     const validationHandler = ValidationHandler.getInstance()
     validationHandler.add(
-      new Validation(this.params.sheetName, 'A2:A', '', '', false, [
-        'sujet',
-        'titre',
-        'sous-titre',
-        'paragraphe',
-        'élément de liste',
-        'aucun'
-      ])
+      new Validation(params.sheetName, 'A2:A', '', '', false, TEMPLATE_TYPES)
     )
     validationHandler.add(
-      new Validation(
-        this.params.sheetName,
-        'B2:B',
-        '',
-        '',
-        false,
-        this.params.conditions
-      )
+      new Validation(params.sheetName, 'B2:B', '', '', false, params.conditions)
     )
+  }
+
+  public addValidation () {
+    EmailTemplate.addValidation(this.params)
   }
 
   public constructHtml (data: any) {
     let html = ''
     let subject = ''
     let listContext = false
+    const closeList = () => {
+      html += listContext ? '</ul>' : ''
+      listContext = false
+    }
     for (const entry of this.textEntries) {
       const conditionOk = this.params.evaluateCondition(entry.condition, data)
       switch (entry.type) {
         case 'sujet':
-          subject = entry.richText?.getText() ?? '' // no rich text handling for subject
+          if (conditionOk) subject = entry.text // plain text, no rich text handling
           break
         case 'aucun':
-          html += listContext ? '</ul>' : ''
-          listContext = false
-          if (conditionOk) html += entry.richText?.getText() // no rich text handling for 'aucun'
+          closeList()
+          // Raw pass-through: the only way to put custom HTML in the mail.
+          if (conditionOk) html += entry.text
           break
         case 'paragraphe':
-          html += listContext ? '</ul>' : ''
-          listContext = false
-          if (conditionOk)
-            html += `<p>${
-              entry.richText
-                ? this.richTextToHtml(entry.richText)
-                : 'Paragraphe'
-            }</p>`
+          closeList()
+          if (conditionOk) html += `<p>${this.entryToHtml(entry)}</p>`
           break
         case 'titre':
-          html += listContext ? '</ul>' : ''
-          listContext = false
-          if (conditionOk)
-            html += `<h1>${entry.richText?.getText() ?? 'Titre 1'}</h1>` // no rich text handling for title
+          closeList()
+          if (conditionOk) html += `<h1>${textToHtml(entry.text)}</h1>`
           break
         case 'sous-titre':
-          html += listContext ? '</ul>' : ''
-          listContext = false
-          if (conditionOk)
-            html += `<h2>${entry.richText?.getText() ?? 'Titre 2'}</h2>` // no rich text handling for subtitle
+          closeList()
+          if (conditionOk) html += `<h2>${textToHtml(entry.text)}</h2>`
           break
         case 'élément de liste':
           if (conditionOk) {
             html += listContext ? '' : '<ul>'
             listContext = true
-            html += `<li>${
-              entry.richText
-                ? this.richTextToHtml(entry.richText)
-                : 'Elément de liste'
-            }</li>`
+            html += `<li>${this.entryToHtml(entry)}</li>`
           }
           break
         default:
           break
       }
     }
-    // A template ending with list items would otherwise leave the <ul> open.
-    html += listContext ? '</ul>' : ''
+    closeList()
     return { subject, html }
   }
 
   public insertData (html: string, data: any): string {
     return this.params.insertData(html, data)
+  }
+
+  public insertSubjectData (subject: string, data: any): string {
+    return this.params.insertSubjectData
+      ? this.params.insertSubjectData(subject, data)
+      : subject
+  }
+
+  /** Rich text when the cell holds text, escaped plain text otherwise. */
+  private entryToHtml (entry: TemplateEntry): string {
+    return entry.richText
+      ? this.richTextToHtml(entry.richText)
+      : textToHtml(entry.text)
   }
 
   private richTextToHtml (
@@ -136,7 +147,7 @@ export class EmailTemplate {
     const getRunAsHtml = (
       richTextRun: GoogleAppsScript.Spreadsheet.RichTextValue
     ) => {
-      const richText = richTextRun.getText()
+      const text = textToHtml(richTextRun.getText())
 
       // Returns the rendered style of text in a cell.
       const style = richTextRun.getTextStyle()
@@ -165,8 +176,8 @@ export class EmailTemplate {
         .map(attr => [attr, styles[attr]].join(':'))
         .join(';')
 
-      const styledText = `<span style='${css}'>${richText}</span>`
-      return url ? `<a href='${url}'>${styledText}</a>` : styledText
+      const styledText = `<span style='${css}'>${text}</span>`
+      return url ? `<a href="${escapeHtml(url)}">${styledText}</a>` : styledText
     }
 
     /* Returns the Rich Text string split into an array of runs,
